@@ -3,10 +3,10 @@ from random import choice as random_choice
 import pygame as pg
 
 # Константы для размеров поля и сетки:
-WIN_WIDTH, WIN_HEIGHT = 640, 480
+WINDOW_WIDTH, WINDOW_HEIGHT = 640, 480
 CELL_SIZE = 20
-GRID_W = WIN_WIDTH // CELL_SIZE
-GRID_H = WIN_HEIGHT // CELL_SIZE
+GRID_WIDTH = WINDOW_WIDTH // CELL_SIZE
+GRID_HEIGHT = WINDOW_HEIGHT // CELL_SIZE
 
 # Направления движения:
 DIR_UP = (0, -1)
@@ -18,160 +18,160 @@ DIR_RIGHT = (1, 0)
 BG_COLOR = (0, 0, 0)
 
 # Цвет границы ячейки:
-CELL_BORDER_COLOR = (93, 216, 228)
+GRID_BORDER_COLOR = (93, 216, 228)
 
 # Цвет яблока:
-FRUIT_COLOR = (255, 0, 0)
+APPLE_FILL_COLOR = (255, 0, 0)
 
 # Цвет змейки:
-SNAKE_BODY_COLOR = (0, 255, 0)
+SNAKE_FILL_COLOR = (0, 255, 0)
 
-# Скорость движения змейки:
-GAME_SPEED = 20
+# Скорость игры:
+MOVE_SPEED = 20
 
-# Настройка игрового окна:
-window = pg.display.set_mode((WIN_WIDTH, WIN_HEIGHT), 0, 32)
+# Настройка окна:
+game_window = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), 0, 32)
 
-# Заголовок окна игрового поля:
-pg.display.set_caption('Snake Game')
+# Заголовок окна:
+pg.display.set_caption('Snake')
 
-# Настройка времени:
-timer = pg.time.Clock()
+# Таймер:
+game_clock = pg.time.Clock()
 
 
-# Тут опишите все классы игры.
-class BaseObject:
-    """Базовый класс для наследования"""
+# Определение классов игры.
+class GameObject:
+    """Родительский класс"""
 
     def __init__(self) -> None:
-        self.coord = ((WIN_WIDTH // 2), (WIN_HEIGHT // 2))
+        self.position = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
         self.color = None
 
-    def render(self) -> None:
-        """Метод для переопределения у потомков"""
+    def draw(self) -> None:
+        """Для переопределения в наследниках"""
         pass
 
 
-class Fruit(BaseObject):
-    """Фрукт"""
+class Apple(GameObject):
+    """Класс яблока"""
 
     def __init__(self) -> None:
-        self.coord = self.new_position()
-        self.color = FRUIT_COLOR
+        self.position = self.new_position()
+        self.color = APPLE_FILL_COLOR
 
     def new_position(self) -> tuple:
-        """Возвращает координаты фрукта"""
-        x = random_choice(range(0, WIN_WIDTH, 20))
-        y = random_choice(range(0, WIN_HEIGHT, 20))
-        self.coord = (x, y)
-        return (x, y)
+        """Генерация случайной позиции"""
+        x_coord = random_choice(range(0, WINDOW_WIDTH, 20))
+        y_coord = random_choice(range(0, WINDOW_HEIGHT, 20))
+        self.position = (x_coord, y_coord)
+        return (x_coord, y_coord)
 
-    def render(self) -> None:
-        """Рисует фрукт"""
-        rect = pg.Rect(self.coord, (CELL_SIZE, CELL_SIZE))
-        pg.draw.rect(window, self.color, rect)
-        pg.draw.rect(window, CELL_BORDER_COLOR, rect, 1)
+    def draw(self) -> None:
+        """Отображение яблока"""
+        rect = pg.Rect(self.position, (CELL_SIZE, CELL_SIZE))
+        pg.draw.rect(game_window, self.color, rect)
+        pg.draw.rect(game_window, GRID_BORDER_COLOR, rect, 1)
 
 
-class Snake(BaseObject):
-    """Змейка"""
+class Snake(GameObject):
+    """Класс змейки"""
 
     def __init__(self) -> None:
         super().__init__()
-        self.size = 1
-        self.segments = [self.coord]
+        self.length = 1
+        self.body = [self.position]
         self.direction = DIR_RIGHT
-        self.next_dir = None
-        self.color = SNAKE_BODY_COLOR
-        self.prev_tail = None
+        self.next_direction = None
+        self.color = SNAKE_FILL_COLOR
+        self.previous_tail = None
 
-    def change_direction(self) -> None:
-        """Меняет направление"""
-        if self.next_dir:
-            self.direction = self.next_dir
-            self.next_dir = None
+    def update_direction(self) -> None:
+        """Обновление направления движения"""
+        if self.next_direction:
+            self.direction = self.next_direction
+            self.next_direction = None
 
-    def move_forward(self) -> None:
+    def move(self) -> None:
         """Движение змейки"""
         head = self.get_head()
 
         new_head = (
-            (head[0] + self.direction[0] * 20) % WIN_WIDTH,
-            (head[1] + self.direction[1] * 20) % WIN_HEIGHT)
-        if new_head in self.segments[2:]:
+            (head[0] + self.direction[0] * CELL_SIZE) % WINDOW_WIDTH,
+            (head[1] + self.direction[1] * CELL_SIZE) % WINDOW_HEIGHT
+        )
+        if new_head in self.body[2:]:
             self.reset()
             return
 
-        self.segments.insert(0, new_head)
-        if len(self.segments) > self.size:
-            self.prev_tail = self.segments.pop()
+        self.body.insert(0, new_head)
+        if len(self.body) > self.length:
+            self.previous_tail = self.body.pop()
 
-    def render(self) -> None:
+    def draw(self) -> None:
         """Рисует змейку"""
-        for segment in self.segments[:-1]:
-            rect = (pg.Rect(segment, (CELL_SIZE, CELL_SIZE)))
-            pg.draw.rect(window, self.color, rect)
-            pg.draw.rect(window, CELL_BORDER_COLOR, rect, 1)
+        for segment in self.body[:-1]:
+            rect = pg.Rect(segment, (CELL_SIZE, CELL_SIZE))
+            pg.draw.rect(game_window, self.color, rect)
+            pg.draw.rect(game_window, GRID_BORDER_COLOR, rect, 1)
 
-        head_rect = pg.Rect(self.segments[0], (CELL_SIZE, CELL_SIZE))
-        pg.draw.rect(window, self.color, head_rect)
-        pg.draw.rect(window, CELL_BORDER_COLOR, head_rect, 1)
+        head_rect = pg.Rect(self.body[0], (CELL_SIZE, CELL_SIZE))
+        pg.draw.rect(game_window, self.color, head_rect)
+        pg.draw.rect(game_window, GRID_BORDER_COLOR, head_rect, 1)
 
-        if self.prev_tail:
-            tail_rect = pg.Rect(self.prev_tail, (CELL_SIZE, CELL_SIZE))
-            pg.draw.rect(window, BG_COLOR, tail_rect)
+        if self.previous_tail:
+            tail_rect = pg.Rect(self.previous_tail, (CELL_SIZE, CELL_SIZE))
+            pg.draw.rect(game_window, BG_COLOR, tail_rect)
 
     def get_head(self) -> tuple:
-        """Возвращает координаты головы"""
-        return self.segments[0]
+        """Возвращает текущую позицию головы"""
+        return self.body[0]
 
     def reset(self) -> None:
-        """Сбрасывает игру"""
-        window.fill(BG_COLOR)
-        self.size = 1
-        self.coord = ((WIN_WIDTH // 2), (WIN_HEIGHT // 2))
-        self.segments = [self.coord]
+        """Сброс игры"""
+        game_window.fill(BG_COLOR)
+        self.length = 1
+        self.position = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+        self.body = [self.position]
         self.direction = random_choice((DIR_RIGHT, DIR_LEFT, DIR_UP, DIR_DOWN))
-        self.next_dir = None
-        self.color = SNAKE_BODY_COLOR
+        self.next_direction = None
 
 
-def process_keys(player: BaseObject) -> None:
-    """Обрабатывает нажатия клавиш"""
+def handle_input(snake: GameObject) -> None:
+    """Обработка ввода"""
     for event in pg.event.get():
         if event.type == pg.QUIT:
             pg.quit()
             raise SystemExit
         elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_UP and player.direction != DIR_DOWN:
-                player.next_dir = DIR_UP
-            elif event.key == pg.K_DOWN and player.direction != DIR_UP:
-                player.next_dir = DIR_DOWN
-            elif event.key == pg.K_LEFT and player.direction != DIR_RIGHT:
-                player.next_dir = DIR_LEFT
-            elif event.key == pg.K_RIGHT and player.direction != DIR_LEFT:
-                player.next_dir = DIR_RIGHT
+            if event.key == pg.K_UP and snake.direction != DIR_DOWN:
+                snake.next_direction = DIR_UP
+            elif event.key == pg.K_DOWN and snake.direction != DIR_UP:
+                snake.next_direction = DIR_DOWN
+            elif event.key == pg.K_LEFT and snake.direction != DIR_RIGHT:
+                snake.next_direction = DIR_LEFT
+            elif event.key == pg.K_RIGHT and snake.direction != DIR_LEFT:
+                snake.next_direction = DIR_RIGHT
 
 
-def main_game():
-    """Запуск игры"""
+def main():
+    """Основной цикл игры"""
     pg.init()
     snake = Snake()
-    fruit = Fruit()
+    apple = Apple()
 
     while True:
-        timer.tick(GAME_SPEED)
+        game_clock.tick(MOVE_SPEED)
 
-        process_keys(snake)
-        snake.change_direction()
-        snake.move_forward()
-        if snake.get_head() == fruit.coord:
-            snake.size += 1
-            fruit.new_position()
-        snake.render()
-        fruit.render()
+        handle_input(snake)
+        snake.update_direction()
+        snake.move()
+        if snake.get_head() == apple.position:
+            snake.length += 1
+            apple.new_position()
+        snake.draw()
+        apple.draw()
         pg.display.update()
 
 
 if __name__ == '__main__':
-    main_game()
+    main()
